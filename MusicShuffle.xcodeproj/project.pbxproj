@@ -1,0 +1,206 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B00001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000001 /* ContentView.swift */; };
+		B00002 /* MusicPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000002 /* MusicPlayer.swift */; };
+		B00003 /* MusicShuffleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000003 /* MusicShuffleApp.swift */; };
+		B00004 /* ShuffleSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000018 /* ShuffleSource.swift */; };
+		B00005 /* SourcePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000019 /* SourcePickerView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		000002 /* MusicPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicPlayer.swift; sourceTree = "<group>"; };
+		000003 /* MusicShuffleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicShuffleApp.swift; sourceTree = "<group>"; };
+		000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		000009 /* MusicShuffle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MusicShuffle.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000018 /* ShuffleSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuffleSource.swift; sourceTree = "<group>"; };
+		000019 /* SourcePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcePickerView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		000005 /* MusicShuffle */ = {
+			isa = PBXGroup;
+			children = (
+				000003 /* MusicShuffleApp.swift */,
+				000002 /* MusicPlayer.swift */,
+				000018 /* ShuffleSource.swift */,
+				000001 /* ContentView.swift */,
+				000019 /* SourcePickerView.swift */,
+				000004 /* Info.plist */,
+			);
+			name = MusicShuffle;
+			sourceTree = "<group>";
+		};
+		000014 /* MusicShuffle */ = {
+			isa = PBXGroup;
+			children = (
+				000005 /* MusicShuffle */,
+				000017 /* Products */,
+			);
+			name = MusicShuffle;
+			sourceTree = "<group>";
+		};
+		000017 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000009 /* MusicShuffle.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000006 /* MusicShuffle */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000007 /* Build configuration list for PBXNativeTarget "MusicShuffle" */;
+			buildPhases = (
+				000008 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MusicShuffle;
+			productName = MusicShuffle;
+			productReference = 000009 /* MusicShuffle.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000012 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = 000013 /* Build configuration list for PBXProject "MusicShuffle" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000014 /* MusicShuffle */;
+			productRefGroup = 000017 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000006 /* MusicShuffle */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00001 /* ContentView.swift in Sources */,
+				B00002 /* MusicPlayer.swift in Sources */,
+				B00003 /* MusicShuffleApp.swift in Sources */,
+				B00004 /* ShuffleSource.swift in Sources */,
+				B00005 /* SourcePickerView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = YAU948K7T5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.elliotreich.MusicShuffle;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = YAU948K7T5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.elliotreich.MusicShuffle;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		000015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		000016 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				SDKROOT = macosx;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		000007 /* Build configuration list for PBXNativeTarget "MusicShuffle" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000010 /* Debug */,
+				000011 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000013 /* Build configuration list for PBXProject "MusicShuffle" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000015 /* Debug */,
+				000016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000012 /* Project object */;
+}
