@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# SwiftPM and Xcode build products
+.build/
+.swiftpm/
+DerivedData/
+
+# Generated app bundles, previews, and icon intermediates
+outputs/
+work/
+
+# Local IDE state
+*.xcuserstate
+xcuserdata/
+
+# Signing and local configuration
+*.p12
+*.mobileprovision
+*.provisionprofile
+Secrets.xcconfig

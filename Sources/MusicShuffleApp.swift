@@ -1,0 +1,424 @@
+import SwiftUI
+import MusicKit
+import Observation
+import AppKit
+
+@main
+struct MusicShuffleApp: App {
+    @State private var model = LibraryModel()
+    @State private var isFlipped = false
+
+    var body: some Scene {
+        MenuBarExtra {
+            FlipWidget(model: model, isFlipped: $isFlipped)
+                .frame(width: 250, height: 266)
+                .fixedSize()
+                .onOpenURL { url in
+                    guard url.scheme == "musicshuffle", url.host == "shuffle" else { return }
+                    Task { await model.shuffle() }
+                }
+        } label: {
+            Image(systemName: model.isPlaying ? "waveform" : "shuffle")
+                .contextMenu {
+                    Button("Quit MusicShuffle", role: .destructive) {
+                        NSApplication.shared.terminate(nil)
+                    }
+                }
+        }
+        .menuBarExtraStyle(.window)
+    }
+}
+
+enum ShuffleSource: Equatable {
+    case allSongs
+    case recentlyAdded
+    case playlist(MusicItemID, String)
+
+    var title: String {
+        switch self {
+        case .allSongs: "All songs"
+        case .recentlyAdded: "Recently added"
+        case .playlist(_, let name): name
+        }
+    }
+}
+
+@MainActor
+@Observable
+final class LibraryModel {
+    enum Phase: Equatable {
+        case idle, authorizing, loading, ready, needsPermission, failed(String)
+    }
+
+    var phase: Phase = .idle
+    var songs: [Song] = []
+    var playlists: [Playlist] = []
+    var currentTrack: Song?
+    var isPlaying = false
+    var statusText = "Ready to shuffle"
+    var source: ShuffleSource = .allSongs
+
+    private let pageSize = 50
+    private let maxSongs = 250
+    private var playlistTracks: [MusicItemID: [Song]] = [:]
+    private var hasStarted = false
+
+    var sourceCount: Int {
+        switch source {
+        case .allSongs: songs.count
+        case .recentlyAdded: songs.filter { $0.libraryAddedDate != nil }.count
+        case .playlist(let id, _): playlistTracks[id]?.count ?? 0
+        }
+    }
+
+    func start() async {
+        guard !hasStarted else { return }
+        hasStarted = true
+        phase = .authorizing
+        statusText = "Checking Apple Music access…"
+
+        let status = await MusicAuthorization.request()
+        guard status == .authorized else {
+            phase = .needsPermission
+            statusText = "Music access is off"
+            return
+        }
+        await refreshLibrary()
+    }
+
+    func refreshLibrary() async {
+        phase = .loading
+        statusText = "Loading a small library sample…"
+        do {
+            async let loadedSongs = loadSongs()
+            async let loadedPlaylists = loadPlaylists()
+            songs = try await loadedSongs
+            playlists = try await loadedPlaylists
+            phase = .ready
+            statusText = "Ready to shuffle"
+        } catch {
+            phase = .failed(error.localizedDescription)
+            statusText = "Couldn’t read your library"
+        }
+    }
+
+    func shuffle() async {
+        guard phase == .ready else { return }
+        let pool: [Song]
+        do {
+            pool = try await songsForCurrentSource()
+        } catch {
+            statusText = "Couldn’t load that source"
+            return
+        }
+        guard let next = pool.randomElement() else {
+            statusText = "That source has no songs yet"
+            return
+        }
+
+        do {
+            let player = ApplicationMusicPlayer.shared
+            player.queue = [next]
+            try await player.play()
+            currentTrack = next
+            isPlaying = true
+            statusText = "Playing now"
+        } catch {
+            statusText = "Playback unavailable"
+        }
+    }
+
+    func stop() {
+        ApplicationMusicPlayer.shared.stop()
+        isPlaying = false
+        statusText = "Ready to shuffle"
+    }
+
+    private func songsForCurrentSource() async throws -> [Song] {
+        switch source {
+        case .allSongs:
+            return songs
+        case .recentlyAdded:
+            return songs.filter { $0.libraryAddedDate != nil }
+        case .playlist(let id, _):
+            if let cached = playlistTracks[id] {
+                return cached
+            } else if let playlist = playlists.first(where: { $0.id == id }) {
+                let loaded = try await playlist.with(.entries)
+                let tracks = loaded.entries?.compactMap { entry -> Song? in
+                    guard case let .song(song) = entry.item else { return nil }
+                    return song
+                } ?? []
+                playlistTracks[id] = tracks
+                return tracks
+            } else {
+                return []
+            }
+        }
+    }
+
+    private func loadPlaylists() async throws -> [Playlist] {
+        var result: [Playlist] = []
+        var offset = 0
+        while true {
+            var request = MusicLibraryRequest<Playlist>()
+            request.limit = pageSize
+            request.offset = offset
+            let page = Array(try await request.response().items)
+            result.append(contentsOf: page)
+            guard page.count == pageSize else { break }
+            offset += page.count
+        }
+        return result
+    }
+
+    private func loadSongs() async throws -> [Song] {
+        var result: [Song] = []
+        var offset = 0
+        while result.count < maxSongs {
+            var request = MusicLibraryRequest<Song>()
+            request.limit = min(pageSize, maxSongs - result.count)
+            request.offset = offset
+            let page = Array(try await request.response().items)
+            result.append(contentsOf: page)
+            guard page.count == request.limit else { break }
+            offset += page.count
+        }
+        return result
+    }
+}
+
+struct FlipWidget: View {
+    @Bindable var model: LibraryModel
+    @Binding var isFlipped: Bool
+
+    var body: some View {
+        ZStack {
+            ShuffleFace(model: model, flip: { withAnimation(.smooth(duration: 0.45)) { isFlipped = true } })
+                .frame(width: 250, height: 266, alignment: .topLeading)
+                .opacity(isFlipped ? 0 : 1)
+                .allowsHitTesting(!isFlipped)
+                .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+            SettingsFace(model: model, flip: { withAnimation(.smooth(duration: 0.45)) { isFlipped = false } })
+                .frame(width: 250, height: 266, alignment: .topLeading)
+                .opacity(isFlipped ? 1 : 0)
+                .allowsHitTesting(isFlipped)
+                .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+        }
+        .background(deviceSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
+        .animation(.smooth(duration: 0.45), value: isFlipped)
+        .task { await model.start() }
+    }
+
+    private var deviceSurface: some View {
+        LinearGradient(
+            colors: [Color.white.opacity(0.98), Color(red: 0.86, green: 0.86, blue: 0.84)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+}
+
+struct ShuffleFace: View {
+    @Bindable var model: LibraryModel
+    let flip: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Color.clear
+                .frame(height: 22)
+
+            ShuffleWheel {
+                Task { await model.shuffle() }
+            }
+            .padding(.top, 0)
+
+            Button(action: flip) {
+                ZStack {
+                    Text(model.source.title)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: 172, alignment: .center)
+                        .multilineTextAlignment(.center)
+                    HStack {
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                    }
+                }
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.primary.opacity(0.72))
+                .padding(.vertical, 7)
+                .padding(.horizontal, 11)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(width: 208, height: 34)
+            .background(Color.white.opacity(0.42), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+            }
+            .help("Choose a shuffle source")
+            .padding(.top, 16)
+
+            HStack {
+                Spacer()
+                Button(action: flip) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Settings")
+            }
+            .padding(.horizontal, 13)
+            .padding(.top, 16)
+            .padding(.bottom, 0)
+            .frame(height: 35, alignment: .top)
+        }
+        .frame(width: 250, height: 266, alignment: .top)
+    }
+}
+
+struct SettingsFace: View {
+    @Bindable var model: LibraryModel
+    let flip: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Button(action: flip) { Image(systemName: "chevron.left") }
+                    .buttonStyle(.plain)
+                Text("Settings")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                Spacer()
+                Button {
+                    Task { await model.refreshLibrary() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, 26)
+
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("SHUFFLE FROM")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .tracking(1.2)
+                        .padding(.bottom, 9)
+
+                    SourceRow(title: "All songs", detail: "Your whole library", isSelected: model.source == .allSongs) {
+                        model.source = .allSongs
+                    }
+                    SourceRow(title: "Recently added", detail: "Songs added to your library", isSelected: model.source == .recentlyAdded) {
+                        model.source = .recentlyAdded
+                    }
+
+                    if !model.playlists.isEmpty {
+                        Text("PLAYLISTS")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .tracking(1.2)
+                            .padding(.top, 20)
+                            .padding(.bottom, 9)
+                        ForEach(model.playlists, id: \.id) { playlist in
+                            SourceRow(title: playlist.name, detail: "Playlist", isSelected: model.source == .playlist(playlist.id, playlist.name)) {
+                                model.source = .playlist(playlist.id, playlist.name)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollIndicators(.visible)
+            .frame(maxHeight: .infinity)
+
+            HStack {
+                Image(systemName: "music.note")
+                Text(model.phase == .needsPermission ? "Allow Apple Music access to begin" : "Changes apply to the next shuffle")
+            }
+            .font(.system(size: 10))
+            .foregroundStyle(.tertiary)
+            .padding(.top, 10)
+        }
+        .padding(24)
+        .frame(width: 250, height: 266, alignment: .topLeading)
+    }
+}
+
+struct ShuffleWheel: View {
+    let action: () -> Void
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.92))
+                .overlay { Circle().stroke(Color.black.opacity(0.08), lineWidth: 1) }
+                .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
+            Circle()
+                .stroke(.primary.opacity(0.08), lineWidth: 1)
+                .padding(18)
+            Image(systemName: "shuffle")
+                .font(.system(size: 27, weight: .medium))
+                .foregroundStyle(.primary)
+            Button(action: action) { Color.clear }
+                .frame(width: 118, height: 118)
+                .contentShape(Circle())
+                .buttonStyle(.plain)
+                .zIndex(1)
+            Image(systemName: "chevron.up")
+                .font(.system(size: 11, weight: .semibold))
+                .offset(y: -70)
+                .foregroundStyle(.secondary)
+                .allowsHitTesting(false)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 11, weight: .semibold))
+                .offset(y: 70)
+                .foregroundStyle(.secondary)
+                .allowsHitTesting(false)
+            Image(systemName: "chevron.left")
+                .font(.system(size: 11, weight: .semibold))
+                .offset(x: -70)
+                .foregroundStyle(.secondary)
+                .allowsHitTesting(false)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .offset(x: 70)
+                .foregroundStyle(.secondary)
+                .allowsHitTesting(false)
+        }
+        .frame(width: 156, height: 156)
+    }
+}
+
+struct SourceRow: View {
+    let title: String
+    let detail: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 11) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .medium))
+                    Text(detail)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .contentShape(Rectangle())
+            .padding(.vertical, 7)
+        }
+        .buttonStyle(.plain)
+    }
+}
