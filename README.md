@@ -28,4 +28,4 @@ The first launch asks macOS for Apple Music access. The app requires a signed-in
 
 ## Repository status
 
-The project is being prepared for public release, but it does not yet have a GitHub remote. Before publishing, choose an open-source license and add the repository URL after the first public push.
+This project is published under the MIT License at https://github.com/elliotreich/musicshuffle-macos.
