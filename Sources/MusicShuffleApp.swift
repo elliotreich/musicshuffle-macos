@@ -20,6 +20,17 @@ struct MusicShuffleApp: App {
         } label: {
             Image(systemName: model.isPlaying ? "waveform" : "shuffle")
                 .contextMenu {
+                    if model.phase == .ready {
+                        Button("Shuffle Now") {
+                            Task { await model.shuffle() }
+                        }
+                        if model.isPlaying {
+                            Button("Stop Playback") {
+                                model.stop()
+                            }
+                        }
+                        Divider()
+                    }
                     Button("Quit MusicShuffle", role: .destructive) {
                         NSApplication.shared.terminate(nil)
                     }
@@ -55,7 +66,7 @@ final class LibraryModel {
     var playlists: [Playlist] = []
     var currentTrack: Song?
     var isPlaying = false
-    var statusText = "Ready to shuffle"
+    var statusText = "Tap the wheel to shuffle"
     var source: ShuffleSource = .allSongs
 
     private let pageSize = 50
@@ -66,9 +77,17 @@ final class LibraryModel {
     var sourceCount: Int {
         switch source {
         case .allSongs: songs.count
-        case .recentlyAdded: songs.filter { $0.libraryAddedDate != nil }.count
+        case .recentlyAdded: recentCount
         case .playlist(let id, _): playlistTracks[id]?.count ?? 0
         }
+    }
+
+    var recentCount: Int {
+        songs.filter { $0.libraryAddedDate != nil }.count
+    }
+
+    func playlistCount(_ id: MusicItemID) -> Int? {
+        playlistTracks[id]?.count
     }
 
     func start() async {
@@ -102,6 +121,16 @@ final class LibraryModel {
         }
     }
 
+    func requestAccess() async {
+        let status = await MusicAuthorization.request()
+        if status == .authorized {
+            await refreshLibrary()
+        } else {
+            phase = .needsPermission
+            statusText = "Apple Music access is off"
+        }
+    }
+
     func shuffle() async {
         guard phase == .ready else { return }
         let pool: [Song]
@@ -131,6 +160,7 @@ final class LibraryModel {
     func stop() {
         ApplicationMusicPlayer.shared.stop()
         isPlaying = false
+        currentTrack = nil
         statusText = "Ready to shuffle"
     }
 
@@ -195,12 +225,12 @@ struct FlipWidget: View {
     var body: some View {
         ZStack {
             ShuffleFace(model: model, flip: { withAnimation(.smooth(duration: 0.45)) { isFlipped = true } })
-                .frame(width: 250, height: 266, alignment: .topLeading)
+                .frame(width: 250, height: 290, alignment: .topLeading)
                 .opacity(isFlipped ? 0 : 1)
                 .allowsHitTesting(!isFlipped)
                 .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
             SettingsFace(model: model, flip: { withAnimation(.smooth(duration: 0.45)) { isFlipped = false } })
-                .frame(width: 250, height: 266, alignment: .topLeading)
+                .frame(width: 250, height: 290, alignment: .topLeading)
                 .opacity(isFlipped ? 1 : 0)
                 .allowsHitTesting(isFlipped)
                 .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
@@ -228,12 +258,16 @@ struct ShuffleFace: View {
     var body: some View {
         VStack(spacing: 0) {
             Color.clear
-                .frame(height: 22)
+                .frame(height: 2)
+
+            StatusStrip(model: model)
+                .padding(.horizontal, 18)
+                .frame(height: 52)
 
             ShuffleWheel {
                 Task { await model.shuffle() }
             }
-            .padding(.top, 0)
+            .padding(.top, 6)
 
             Button(action: flip) {
                 ZStack {
@@ -262,7 +296,8 @@ struct ShuffleFace: View {
                     .stroke(Color.black.opacity(0.08), lineWidth: 1)
             }
             .help("Choose a shuffle source")
-            .padding(.top, 16)
+            .accessibilityLabel("Shuffle source: \(model.source.title)")
+            .padding(.top, 6)
 
             HStack {
                 Spacer()
@@ -273,13 +308,13 @@ struct ShuffleFace: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .help("Settings")
+                .accessibilityLabel("Settings")
             }
             .padding(.horizontal, 13)
-            .padding(.top, 16)
-            .padding(.bottom, 0)
-            .frame(height: 35, alignment: .top)
+            .padding(.top, 4)
+            .frame(height: 26, alignment: .top)
         }
-        .frame(width: 250, height: 266, alignment: .top)
+        .frame(width: 250, height: 290, alignment: .top)
     }
 }
 
@@ -295,14 +330,21 @@ struct SettingsFace: View {
                 Text("Settings")
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                 Spacer()
-                Button {
-                    Task { await model.refreshLibrary() }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
+                if model.phase == .loading || model.phase == .authorizing {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Button {
+                        Task { await model.refreshLibrary() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.plain)
+                    .help("Refresh library")
+                    .accessibilityLabel("Refresh library")
                 }
-                .buttonStyle(.plain)
             }
-            .padding(.bottom, 26)
+            .padding(.bottom, 20)
 
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -312,10 +354,10 @@ struct SettingsFace: View {
                         .tracking(1.2)
                         .padding(.bottom, 9)
 
-                    SourceRow(title: "All songs", detail: "Your whole library", isSelected: model.source == .allSongs) {
+                    SourceRow(title: "All songs", detail: "\(model.songs.count) songs", isSelected: model.source == .allSongs) {
                         model.source = .allSongs
                     }
-                    SourceRow(title: "Recently added", detail: "Songs added to your library", isSelected: model.source == .recentlyAdded) {
+                    SourceRow(title: "Recently added", detail: "\(model.recentCount) songs", isSelected: model.source == .recentlyAdded) {
                         model.source = .recentlyAdded
                     }
 
@@ -327,7 +369,7 @@ struct SettingsFace: View {
                             .padding(.top, 20)
                             .padding(.bottom, 9)
                         ForEach(model.playlists, id: \.id) { playlist in
-                            SourceRow(title: playlist.name, detail: "Playlist", isSelected: model.source == .playlist(playlist.id, playlist.name)) {
+                            SourceRow(title: playlist.name, detail: model.playlistCount(playlist.id).map { "\($0) songs" } ?? "Playlist", isSelected: model.source == .playlist(playlist.id, playlist.name)) {
                                 model.source = .playlist(playlist.id, playlist.name)
                             }
                         }
@@ -347,7 +389,7 @@ struct SettingsFace: View {
             .padding(.top, 10)
         }
         .padding(24)
-        .frame(width: 250, height: 266, alignment: .topLeading)
+        .frame(width: 250, height: 290, alignment: .topLeading)
     }
 }
 
@@ -367,9 +409,10 @@ struct ShuffleWheel: View {
                 .font(.system(size: 27, weight: .medium))
                 .foregroundStyle(.primary)
             Button(action: action) { Color.clear }
-                .frame(width: 118, height: 118)
+                .frame(width: 156, height: 156)
                 .contentShape(Circle())
-                .buttonStyle(.plain)
+                .buttonStyle(WheelPressStyle())
+                .accessibilityLabel("Shuffle")
                 .zIndex(1)
             Image(systemName: "chevron.up")
                 .font(.system(size: 11, weight: .semibold))
@@ -406,7 +449,7 @@ struct SourceRow: View {
         Button(action: action) {
             HStack(spacing: 11) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(isSelected ? Color.shuffleAccent : Color.secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(size: 13, weight: .medium))
@@ -421,4 +464,187 @@ struct SourceRow: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+private extension View {
+    func stripSurface() -> some View {
+        padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.black.opacity(0.045), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.black.opacity(0.05), lineWidth: 1)
+            }
+    }
+}
+
+struct WheelPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.65), value: configuration.isPressed)
+    }
+}
+
+struct StatusStrip: View {
+    @Bindable var model: LibraryModel
+
+    var body: some View {
+        switch model.phase {
+        case .authorizing, .loading:
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text(model.statusText)
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 0)
+            }
+            .stripSurface()
+        case .needsPermission:
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Apple Music access is off")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                HStack(spacing: 10) {
+                    Button("Grant access") {
+                        Task { await model.requestAccess() }
+                    }
+                    .foregroundStyle(Color.shuffleAccent)
+                    Button("Open Settings") {
+                        openMediaPrivacyPane()
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .controlSize(.small)
+                .buttonStyle(.plain)
+                .font(.system(size: 10, weight: .semibold))
+            }
+            .stripSurface()
+        case .failed:
+            HStack(spacing: 8) {
+                Text(model.statusText)
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 4)
+                Button("Try again") {
+                    Task { await model.refreshLibrary() }
+                }
+                .controlSize(.small)
+                .buttonStyle(.plain)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.shuffleAccent)
+            }
+            .stripSurface()
+        case .idle, .ready:
+            if let track = model.currentTrack {
+                NowPlayingCard(track: track, isPlaying: model.isPlaying, onStop: { model.stop() })
+                    .stripSurface()
+            } else {
+                HStack(spacing: 7) {
+                    Image(systemName: "shuffle")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.shuffleAccent)
+                    Text(model.statusText)
+                        .font(.system(size: 11, weight: .medium))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer(minLength: 0)
+                }
+                .stripSurface()
+            }
+        }
+    }
+
+    private func openMediaPrivacyPane() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Media") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+}
+
+struct NowPlayingCard: View {
+    let track: Song
+    let isPlaying: Bool
+    let onStop: () -> Void
+
+    var body: some View {
+        HStack(spacing: 9) {
+            artwork
+                .frame(width: 40, height: 40)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(track.title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(track.artistName)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            Spacer(minLength: 4)
+            if isPlaying {
+                Circle()
+                    .fill(Color.shuffleLed)
+                    .frame(width: 6, height: 6)
+                    .shadow(color: Color.shuffleLed.opacity(0.55), radius: 2)
+                    .accessibilityHidden(true)
+            }
+            Button(action: onStop) {
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20, height: 20)
+                    .background(Color.black.opacity(0.06), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .help("Stop playback")
+            .accessibilityLabel("Stop playback")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var artwork: some View {
+        Group {
+            if let url = track.artwork?.url(width: 80, height: 80) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    case .failure, .empty:
+                        artworkPlaceholder
+                    @unknown default:
+                        artworkPlaceholder
+                    }
+                }
+            } else {
+                artworkPlaceholder
+            }
+        }
+    }
+
+    private var artworkPlaceholder: some View {
+        ZStack {
+            Color(red: 0.94, green: 0.93, blue: 0.92)
+            Image(systemName: "music.note")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.tertiary)
+        }
+    }
+}
+
+extension Color {
+    static let shuffleAccent = Color(red: 0.44, green: 0.30, blue: 0.80)
+    static let shuffleLed = Color(red: 0.20, green: 0.62, blue: 0.32)
 }

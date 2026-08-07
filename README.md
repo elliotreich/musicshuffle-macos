@@ -10,7 +10,7 @@ This repository is an early dogfood MVP. It is not yet App Store-ready: producti
 - Authorization is awaited from the SwiftUI task lifecycle instead of racing from initialization.
 - Listening history only records a real `Song` after playback succeeds.
 - Apple Music library reads are paginated in bounded 50-item pages, with a 250-song MVP cap.
-- The UI is a compact Tahoe-inspired widget with a physical iPod Shuffle-style wheel. The corner gear flips to a separate settings face where you choose all songs, recently added, or a playlist.
+- The UI is a compact Tahoe-inspired widget with a physical iPod Shuffle-style wheel. The front face shows what's playing and surfaces permission, loading, and error states inline; the corner gear flips to a separate settings face where you choose all songs, recently added, or a playlist. The menubar icon's context menu adds Shuffle Now and Stop Playback shortcuts.
 - A small WidgetKit extension is bundled with the app. Its dial opens MusicShuffle and triggers a shuffle through the `musicshuffle://shuffle` URL route.
 
 ## Build and run

@@ -5,47 +5,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MusicShuffle Widget Preview</title>
   <style>
-    :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
+    :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; --accent: #704dcc; --led: #339e52; }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #d8d6d1; color: #202025; }
-    .widget { width: 250px; height: 266px; padding: 12px 13px 11px; border: 1px solid #fff8; border-radius: 18px; background: linear-gradient(135deg, #fff, #dcdbd8); box-shadow: 0 16px 32px #0003, inset 0 1px #fff; overflow: hidden; }
+    .widget { width: 250px; height: 290px; padding: 10px 13px 8px; border: 1px solid #fff8; border-radius: 18px; background: linear-gradient(135deg, #fff, #dcdbd8); box-shadow: 0 16px 32px #0003, inset 0 1px #fff; overflow: hidden; }
     header { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .14em; } header button { margin-left: auto; border: 0; background: none; font-size: 16px; cursor: pointer; color: inherit; }
-    .stage { display: grid; place-items: center; padding: 0; }
+    .strip { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 10px; border: 1px solid #0000000d; border-radius: 10px; background: #0000000b; font-size: 11px; font-weight: 600; }
+    .strip .shuffle-mini { color: var(--accent); font-size: 10px; }
+    .strip .spacer { flex: 1; }
+    .stage { display: grid; place-items: center; padding: 8px 0 0; }
     .wheel { position: relative; display: grid; place-items: center; width: 156px; height: 156px; border-radius: 50%; background: #fafaf9; border: 1px solid #d0cfcc; box-shadow: 0 8px 16px #0002, inset 0 0 0 15px #e8e7e4; cursor: pointer; transition: transform .18s ease; }
-    .wheel:hover { transform: scale(1.02); } .wheel:active { transform: scale(.97); } .wheel div { text-align: center; font-size: 27px; }
-    .arrow { position: absolute; font-size: 11px; color: #777; } .up { top: 13px; } .down { bottom: 13px; } .left { left: 13px; } .right { right: 13px; }
-    .source { position: relative; display: flex; align-items: center; justify-content: center; width: 208px; height: 34px; margin: 16px auto 0; padding: 0 11px; border: 1px solid #00000014; border-radius: 10px; background: #ffffff6b; color: #555; font: 500 12px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
+    .wheel:hover { transform: scale(1.02); } .wheel:active { transform: scale(.96); } .wheel div { text-align: center; font-size: 27px; }
+    .arrow { position: absolute; font-size: 11px; color: #777; pointer-events: none; } .up { top: 13px; } .down { bottom: 13px; } .left { left: 13px; } .right { right: 13px; }
+    .source { position: relative; display: flex; align-items: center; justify-content: center; width: 208px; height: 34px; margin: 8px auto 0; padding: 0 11px; border: 1px solid #00000014; border-radius: 10px; background: #ffffff6b; color: #555; font: 500 12px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
     .source span { min-width: 0; max-width: 172px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
     .source b { position: absolute; right: 11px; }
-    .settings { display: none; height: 100%; overflow: hidden; } .widget.flipped .front { display: none; } .widget.flipped .settings { display: flex; flex-direction: column; } .settings h1 { flex: none; margin: 0 0 26px; font-size: 21px; } .settings h2 { margin: 0 0 8px; color: #888; font-size: 10px; letter-spacing: .12em; } .settings .scroll-list { min-height: 0; flex: 1; overflow-y: auto; scrollbar-width: thin; } .row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 0; border: 0; background: none; text-align: left; cursor: pointer; color: inherit; } .row span { flex: 1; } .row b { display: block; font-size: 13px; } .row small { display: block; margin-top: 2px; color: #888; font-size: 10px; } .row .check { color: #6f47ce; font-size: 17px; }
+    .gear { display: flex; justify-content: flex-end; height: 28px; padding-top: 6px; } .gear button { border: 0; background: none; color: #777; font-size: 13px; cursor: pointer; }
+    .settings { display: none; height: 100%; overflow: hidden; } .widget.flipped .front { display: none; } .widget.flipped .settings { display: flex; flex-direction: column; } .settings h1 { flex: none; margin: 0 0 20px; font-size: 21px; }
+    .settings h2 { margin: 0 0 8px; color: #888; font-size: 10px; letter-spacing: .12em; } .settings .scroll-list { min-height: 0; flex: 1; overflow-y: auto; scrollbar-width: thin; }
+    .row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 0; border: 0; background: none; text-align: left; cursor: pointer; color: inherit; } .row span { flex: 1; } .row b { display: block; font-size: 13px; font-weight: 500; } .row small { display: block; margin-top: 2px; color: #888; font-size: 10px; } .row .check { color: var(--accent); font-size: 17px; flex: none; }
+    .footer { display: flex; align-items: center; gap: 5px; margin-top: 10px; color: #999; font-size: 10px; }
+    .now { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .art { width: 40px; height: 40px; flex: none; border-radius: 8px; background: #efeeeb; display: grid; place-items: center; color: #aaa; font-size: 14px; border: 1px solid #00000014; }
+    .meta { min-width: 0; } .meta b { display: block; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .meta small { display: block; margin-top: 1px; color: #888; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .led { width: 6px; height: 6px; border-radius: 50%; background: var(--led); box-shadow: 0 0 3px var(--led); }
+    .stop { width: 20px; height: 20px; flex: none; border: 0; border-radius: 50%; background: #0000000f; color: #666; font-size: 8px; cursor: pointer; }
   </style>
 </head>
 <body>
   <main class="widget" id="widget">
     <div class="front">
-      <div style="height:7px"></div>
-      <div class="stage"><button class="wheel" onclick="shuffle()"><i class="arrow up">⌃</i><i class="arrow down">⌄</i><i class="arrow left">‹</i><i class="arrow right">›</i><div>⇄</div></button></div>
+      <div class="strip" id="strip"><span class="shuffle-mini">⇄</span><span id="status">Tap the wheel to shuffle</span><span class="spacer"></span></div>
+      <div class="stage"><button class="wheel" onclick="shuffle()" aria-label="Shuffle"><i class="arrow up">⌃</i><i class="arrow down">⌄</i><i class="arrow left">‹</i><i class="arrow right">›</i><div>⇄</div></button></div>
       <button class="source" onclick="flip()"><span id="sourceLabel">All songs</span><b>›</b></button>
-      <div style="display:flex;justify-content:flex-end;margin-top:16px"><button onclick="flip()" style="border:0;background:none;color:#777;font-size:14px;cursor:pointer">⚙</button></div>
+      <div class="gear"><button onclick="flip()" aria-label="Settings">⚙</button></div>
     </div>
     <div class="settings">
-      <header><button onclick="flip()">‹</button> SETTINGS <span></span></header>
-      <h1>Choose the source</h1><div class="scroll-list"><h2>SHUFFLE FROM</h2>
-      <button class="row" onclick="pick('All songs', this)"><span class="check">●</span><span><b>All songs</b><small>Your whole library</small></span></button>
-      <button class="row" onclick="pick('Recently added', this)"><span class="check">○</span><span><b>Recently added</b><small>Songs added to your library</small></span></button>
+      <header><button onclick="flip()">‹</button> SETTINGS <span></span><button onclick="refresh()" aria-label="Refresh library">↻</button></header>
+      <div class="scroll-list"><h2>SHUFFLE FROM</h2>
+      <button class="row" onclick="pick('All songs', this)"><span class="check">●</span><span><b>All songs</b><small>2,500 songs</small></span></button>
+      <button class="row" onclick="pick('Recently added', this)"><span class="check">○</span><span><b>Recently added</b><small>84 songs</small></span></button>
       <h2 style="margin-top:20px">PLAYLISTS</h2>
-      <button class="row" onclick="pick('Late night', this)"><span class="check">○</span><span><b>Late night</b><small>Playlist</small></span></button>
-      <button class="row" onclick="pick('Field notes', this)"><span class="check">○</span><span><b>Field notes</b><small>Playlist</small></span></button>
-      <button class="row" onclick="pick('2000s Hits Essentials', this)"><span class="check">○</span><span><b>2000s Hits Essentials</b><small>Playlist</small></span></button>
-      <button class="row" onclick="pick('2000s Workout', this)"><span class="check">○</span><span><b>2000s Workout</b><small>Playlist</small></span></button></div>
-      <small style="display:block;margin-top:22px;color:#999">Changes apply to the next shuffle</small>
+      <button class="row" onclick="pick('Late night', this)"><span class="check">○</span><span><b>Late night</b><small>12 songs</small></span></button>
+      <button class="row" onclick="pick('Field notes', this)"><span class="check">○</span><span><b>Field notes</b><small>9 songs</small></span></button>
+      <button class="row" onclick="pick('2000s Hits Essentials', this)"><span class="check">○</span><span><b>2000s Hits Essentials</b><small>75 songs</small></span></button>
+      <button class="row" onclick="pick('2000s Workout', this)"><span class="check">○</span><span><b>2000s Workout</b><small>64 songs</small></span></button></div>
+      <div class="footer"><span>♫</span><span>Changes apply to the next shuffle</span></div>
     </div>
   </main>
   <script>
     const samples = [['A New Kind of Blue','Miles Davis'],['Teardrop','Massive Attack'],['Heaven or Las Vegas','Cocteau Twins']];
+    const strip = document.getElementById('strip'), status = document.getElementById('status');
+    let playing = null;
     function flip() { document.getElementById('widget').classList.toggle('flipped'); }
-    function shuffle() {}
-    function pick(name, row) { document.getElementById('sourceLabel').textContent = name; document.querySelectorAll('.row .check').forEach(x => x.textContent = '○'); row.querySelector('.check').textContent = '●'; flip(); }
+    function shuffle() {
+      const pick = samples[Math.floor(Math.random() * samples.length)];
+      playing = pick;
+      strip.innerHTML = '<span class="now"><span class="art">♫</span><span class="meta"><b>' + pick[0] + '</b><small>' + pick[1] + '</small></span><span class="spacer"></span><span class="led"></span><button class="stop" onclick="stopPlay()" aria-label="Stop playback">■</button></span>';
+    }
+    function stopPlay() {
+      playing = null;
+      status.textContent = 'Ready to shuffle';
+      strip.innerHTML = '<span class="shuffle-mini">⇄</span><span id="status">Ready to shuffle</span><span class="spacer"></span>';
+    }
+    function refresh() {
+      status.textContent = 'Loading a small library sample…';
+      strip.innerHTML = '<span class="shuffle-mini">⇄</span><span id="status">Loading a small library sample…</span><span class="spacer"></span>';
+      setTimeout(() => { status.textContent = 'Tap the wheel to shuffle'; stopPlay(); }, 900);
+    }
+    function pick(name, row) {
+      document.getElementById('sourceLabel').textContent = name;
+      document.querySelectorAll('.row .check').forEach(x => x.textContent = '○');
+      row.querySelector('.check').textContent = '●';
+      flip();
+    }
   </script>
 </body>
 </html>
