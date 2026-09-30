@@ -34,27 +34,28 @@ struct MusicShuffleWidgetView: View {
                     .padding(32)
                 Image(systemName: "shuffle")
                     .font(.system(size: 28, weight: .medium))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.black.opacity(0.85))
                 Image(systemName: "chevron.up")
                     .font(.system(size: 10, weight: .semibold))
                     .offset(y: -49)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.black.opacity(0.5))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .semibold))
                     .offset(y: 49)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.black.opacity(0.5))
                 Image(systemName: "chevron.left")
                     .font(.system(size: 10, weight: .semibold))
                     .offset(x: -49)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.black.opacity(0.5))
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .semibold))
                     .offset(x: 49)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.black.opacity(0.5))
             }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
+        .environment(\.colorScheme, .light)
         .containerBackground(for: .widget) {
             LinearGradient(
                 colors: [Color.white, Color(red: 0.86, green: 0.86, blue: 0.84)],

@@ -239,6 +239,7 @@ struct FlipWidget: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
         .animation(.smooth(duration: 0.45), value: isFlipped)
+        .environment(\.colorScheme, .light)
         .task { await model.start() }
     }
 
@@ -283,7 +284,7 @@ struct ShuffleFace: View {
                     }
                 }
                 .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(.primary.opacity(0.72))
+                .foregroundStyle(Color.black.opacity(0.68))
                 .padding(.vertical, 7)
                 .padding(.horizontal, 11)
                 .contentShape(Rectangle())
@@ -306,7 +307,7 @@ struct ShuffleFace: View {
                         .font(.system(size: 13, weight: .medium))
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.black.opacity(0.55))
                 .help("Settings")
                 .accessibilityLabel("Settings")
             }
@@ -407,7 +408,7 @@ struct ShuffleWheel: View {
                 .padding(18)
             Image(systemName: "shuffle")
                 .font(.system(size: 27, weight: .medium))
-                .foregroundStyle(.primary)
+                .foregroundStyle(Color.black.opacity(0.82))
             Button(action: action) { Color.clear }
                 .frame(width: 156, height: 156)
                 .contentShape(Circle())
@@ -417,22 +418,22 @@ struct ShuffleWheel: View {
             Image(systemName: "chevron.up")
                 .font(.system(size: 11, weight: .semibold))
                 .offset(y: -70)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.black.opacity(0.45))
                 .allowsHitTesting(false)
             Image(systemName: "chevron.down")
                 .font(.system(size: 11, weight: .semibold))
                 .offset(y: 70)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.black.opacity(0.45))
                 .allowsHitTesting(false)
             Image(systemName: "chevron.left")
                 .font(.system(size: 11, weight: .semibold))
                 .offset(x: -70)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.black.opacity(0.45))
                 .allowsHitTesting(false)
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .semibold))
                 .offset(x: 70)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.black.opacity(0.45))
                 .allowsHitTesting(false)
         }
         .frame(width: 156, height: 156)
